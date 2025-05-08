@@ -1,0 +1,797 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1.Design a distributed application using RPC for remote computation where client submits an integer 
+value to the server and server calculates factorial and returns the result to the client 
+program.
+
+//SERVER
+# !pip install xmlrpc
+from xmlrpc.server import SimpleXMLRPCServer
+
+# Define the factorial function
+def factorial(n):
+    result = 1
+    for i in range(1, n + 1):
+        result *= i
+    print(f"Server computed factorial({n}) = {result}")
+    return result
+
+# Create RPC server
+server = SimpleXMLRPCServer(("localhost", 9000))
+print("Server is listening on port 9000...")
+
+# Register the function
+server.register_function(factorial, "factorial")
+
+# Run the server (this will block the cell)
+server.serve_forever()
+
+//CLIENT
+import xmlrpc.client
+
+# Connect to server
+proxy = xmlrpc.client.ServerProxy("http://localhost:9000/")
+
+# Take input from user
+n = int(input("Enter an integer to calculate its factorial: "))
+
+# Call remote factorial function
+result = proxy.factorial(n)
+
+# Display result
+print(f"Factorial of {n} is {result}")
+
+
+##############################################################################################################
+2 Design a distributed application using RMI for remote computation where client submits two 
+strings to the server and server returns the concatenation of the given strings.
+
+//SERVER
+
+pip install Pyro5
+# concat_server.py
+import Pyro5.api
+
+@Pyro5.api.expose
+class ConcatServer:
+    def concatenate(self, str1, str2):
+        print(f"Received: '{str1}' and '{str2}'")
+        return str1 + str2
+
+def main():
+    daemon = Pyro5.server.Daemon()                # start server daemon
+    uri = daemon.register(ConcatServer)           # register object
+    print(f"Server is running. URI: {uri}")
+    daemon.requestLoop()                          # wait for requests
+
+if __name__ == "__main__":
+    main()
+ 
+
+//CLIENT
+import Pyro5.api
+
+def main():
+    uri = input("Enter server URI (e.g., PYRO:obj_xxx@localhost:xxxx): ")
+    concat_server = Pyro5.api.Proxy(uri)
+
+    s1 = input("Enter first string: ")
+    s2 = input("Enter second string: ")
+
+    result = concat_server.concatenate(s1, s2)
+    print(f"Concatenated Result: {result}")
+
+if __name__ == "__main__":
+    main()
+
+###########################################################################################################
+
+3. Implement Union, Intersection, Complement and Difference operations on fuzzy sets. Also 
+create fuzzy relations by Cartesian product of any two fuzzy sets and perform max-min 
+composition on any two fuzzy relations. 
+
+# Fuzzy Set Operations and Relations
+
+def fuzzy_union(A, B):
+    return {x: max(A.get(x, 0), B.get(x, 0)) for x in set(A) | set(B)}
+
+def fuzzy_intersection(A, B):
+    return {x: min(A.get(x, 0), B.get(x, 0)) for x in set(A) & set(B)}
+
+def fuzzy_complement(A):
+    return {x: 1 - val for x, val in A.items()}
+
+def fuzzy_difference(A, B):
+    return {x: min(A.get(x, 0), 1 - B.get(x, 0)) for x in A}
+
+def cartesian_product(A, B):
+    return {(a, b): min(A[a], B[b]) for a in A for b in B}
+
+def max_min_composition(R1, R2):
+    result = {}
+    for a, b in R1:
+        for c, d in R2:
+            if b == c:
+                key = (a, d)
+                val = min(R1[(a, b)], R2[(c, d)])
+                result[key] = max(result.get(key, 0), val)
+    return result
+
+# Example Fuzzy Sets
+A = {'x1': 0.2, 'x2': 0.5, 'x3': 0.7}
+B = {'x1': 0.6, 'x2': 0.4, 'x3': 0.9}
+
+print("Fuzzy Set A:", A)
+print("Fuzzy Set B:", B)
+
+# Union
+union = fuzzy_union(A, B)
+print("\nUnion (A ∪ B):", union)
+
+# Intersection
+intersection = fuzzy_intersection(A, B)
+print("Intersection (A ∩ B):", intersection)
+
+# Complement
+complement_A = fuzzy_complement(A)
+print("Complement (Aᶜ):", complement_A)
+
+# Difference
+difference = fuzzy_difference(A, B)
+print("Difference (A - B):", difference)
+
+# Cartesian Product (Fuzzy Relation)
+relation = cartesian_product(A, B)
+print("\nCartesian Product (A × B):")
+for k, v in relation.items():
+    print(f"{k}: {v}")
+
+# Example Fuzzy Relations for Composition
+R1 = {('x1', 'y1'): 0.3, ('x1', 'y2'): 0.7,
+      ('x2', 'y1'): 0.6, ('x2', 'y2'): 0.4}
+
+R2 = {('y1', 'z1'): 0.5, ('y1', 'z2'): 0.8,
+      ('y2', 'z1'): 0.9, ('y2', 'z2'): 0.2}
+
+# Max-Min Composition
+composition = max_min_composition(R1, R2)
+print("\nMax-Min Composition (R1 ○ R2):")
+for k, v in composition.items():
+    print(f"{k}: {v}")
+
+| **Operation**        | **What it does**                                             |
+| -------------------- | ------------------------------------------------------------ |
+| Union (A ∪ B)        | max(A(x), B(x)) — take the highest membership value.         |
+| Intersection (A ∩ B) | min(A(x), B(x)) — take the lowest membership value.          |
+| Complement (A')      | 1 - A(x) — flip the membership.                              |
+| Difference (A - B)   | min(A(x), 1 - B(x)) — what’s in A but not in B.              |
+| Cartesian product    | Build a matrix combining two fuzzy sets.                     |
+| Max-min composition  | Combine two fuzzy relations using maximum of minimum values. |
+
+
+##############################################################################################################
+4. Write code to simulate requests coming from clients and distribute them among the servers 
+using the load balancing algorithms. 
+
+import random
+
+# Define servers with weights and active connections
+servers = [
+    {'name': 'Server1', 'weight': 2, 'connections': 0},
+    {'name': 'Server2', 'weight': 1, 'connections': 0},
+    {'name': 'Server3', 'weight': 3, 'connections': 0},
+]
+
+# Simulate client requests
+requests = ['Request' + str(i) for i in range(1, 11)]  # 10 client requests
+
+# ---------- Round Robin ----------
+print("----- Round Robin Load Balancing -----")
+server_index = 0
+for req in requests:
+    assigned_server = servers[server_index]['name']
+    print(f"{req} --> {assigned_server}")
+    server_index = (server_index + 1) % len(servers)
+
+# ---------- Random Selection ----------
+print("\n----- Random Selection Load Balancing -----")
+for req in requests:
+    assigned_server = random.choice(servers)['name']
+    print(f"{req} --> {assigned_server}")
+
+# ---------- Weighted Round Robin ----------
+print("\n----- Weighted Round Robin Load Balancing -----")
+# Expand servers list based on weights
+weighted_servers = []
+for server in servers:
+    weighted_servers.extend([server['name']] * server['weight'])
+
+server_index = 0
+for req in requests:
+    assigned_server = weighted_servers[server_index]
+    print(f"{req} --> {assigned_server}")
+    server_index = (server_index + 1) % len(weighted_servers)
+
+# ---------- Least Connections ----------
+print("\n----- Least Connections Load Balancing -----")
+# Reset connections
+for server in servers:
+    server['connections'] = 0
+
+for req in requests:
+    # Find server with least connections
+    least_conn_server = min(servers, key=lambda s: s['connections'])
+    least_conn_server['connections'] += 1  # Add one connection
+    print(f"{req} --> {least_conn_server['name']}")
+
+# Show final connection counts
+print("\nFinal connections per server:")
+for server in servers:
+    print(f"{server['name']}: {server['connections']} connections")
+
+//////////EXTRA OPTIONAL
+
+
+import random
+import threading
+import time
+import matplotlib.pyplot as plt
+
+# Define servers with weights and active connections
+servers = [
+    {'name': 'Server1', 'weight': 2, 'connections': 0, 'handled': 0},
+    {'name': 'Server2', 'weight': 1, 'connections': 0, 'handled': 0},
+    {'name': 'Server3', 'weight': 3, 'connections': 0, 'handled': 0},
+]
+
+# Simulate client requests
+requests = ['Request' + str(i) for i in range(1, 21)]  # 20 client requests
+
+# Simulate random processing time (1-3 seconds)
+def process_request(server, req):
+    server['connections'] += 1
+    server['handled'] += 1
+    print(f"{req} --> {server['name']} (processing...)")
+    time.sleep(random.uniform(1, 3))  # simulate work
+    server['connections'] -= 1
+    print(f"{req} --> {server['name']} (completed)")
+
+# ---------- Least Connections with Threading ----------
+print("\n----- Least Connections Load Balancing with Threads -----")
+threads = []
+
+for req in requests:
+    # Find server with least connections
+    least_conn_server = min(servers, key=lambda s: s['connections'])
+    t = threading.Thread(target=process_request, args=(least_conn_server, req))
+    threads.append(t)
+    t.start()
+
+# Wait for all threads to finish
+for t in threads:
+    t.join()
+
+# Show final request handling count
+print("\nFinal handled requests per server:")
+for server in servers:
+    print(f"{server['name']}: {server['handled']} requests")
+
+# ---------- Plotting ----------
+server_names = [server['name'] for server in servers]
+handled_counts = [server['handled'] for server in servers]
+
+plt.bar(server_names, handled_counts, color=['blue', 'green', 'orange'])
+plt.title('Requests Handled by Each Server')
+plt.xlabel('Server')
+plt.ylabel('Number of Requests')
+plt.show()
+
+
+##########################################################################################################
+5. Optimization of genetic algorithm parameter in hybrid genetic algorithm-neural network 
+modelling: Application to spray drying of coconut milk. 
+
+!pip install deap
+import numpy as np
+from deap import base, creator, tools, algorithms
+import random
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+
+# Synthetic data (simulate spray drying)
+X = np.random.rand(100, 4)  # e.g., temp, flow rate, speed, time
+y = np.sum(X, axis=1) + np.random.normal(0, 0.1, 100)  # target: simulated yield
+
+# Build Neural Network
+def create_model():
+    model = Sequential()
+    model.add(Dense(8, input_dim=4, activation='relu'))
+    model.add(Dense(1, activation='linear'))
+    model.compile(optimizer='adam', loss='mse')
+    return model
+
+# Genetic Algorithm setup
+creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+creator.create("Individual", list, fitness=creator.FitnessMin)
+
+def evaluate(individual):
+    # Example: interpret individual as hyperparameters
+    lr = individual[0]
+    units = int(individual[1])
+    
+    # Build and train NN
+    model = Sequential()
+    model.add(Dense(units, input_dim=4, activation='relu'))
+    model.add(Dense(1, activation='linear'))
+    model.compile(optimizer='adam', loss='mse')
+    model.fit(X, y, epochs=10, verbose=0)
+    
+    loss = model.evaluate(X, y, verbose=0)
+    return (loss,)
+
+toolbox = base.Toolbox()
+toolbox.register("attr_float", random.uniform, 0.0001, 0.01)  # learning rate
+toolbox.register("attr_int", random.randint, 4, 16)           # hidden units
+toolbox.register("individual", tools.initCycle, creator.Individual,
+                 (toolbox.attr_float, toolbox.attr_int), n=1)
+toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
+toolbox.register("evaluate", evaluate)
+toolbox.register("mate", tools.cxBlend, alpha=0.5)
+toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.1, indpb=0.1)
+toolbox.register("select", tools.selTournament, tournsize=3)
+
+pop = toolbox.population(n=10)
+algorithms.eaSimple(pop, toolbox, cxpb=0.5, mutpb=0.2, ngen=5, verbose=True)
+
+best_ind = tools.selBest(pop, k=1)[0]
+print("Best individual (learning rate, hidden units):", best_ind)
+
+
+##############################################################################################################
+6. Implementation of Clonal selection algorithm using Python. 
+
+
+import numpy as np
+import random
+
+# Objective function to minimize
+def objective_function(x):
+    return x ** 2
+
+# Parameters
+population_size = 10         # number of solutions in the population
+num_generations = 20         # number of iterations
+num_clones = 5               # number of clones per selected solution
+mutation_rate = 0.1          # how much we mutate each clone
+x_bounds = [-10, 10]         # allowed range for x
+
+
+# Initialize population (random solutions)
+population = [random.uniform(x_bounds[0], x_bounds[1]) for _ in range(population_size)]
+
+for generation in range(num_generations):
+    # Evaluate fitness (lower is better)
+    fitness = [objective_function(x) for x in population]
+    
+    # Select top solutions
+    sorted_population = [x for _, x in sorted(zip(fitness, population))]
+    best_solutions = sorted_population[:int(population_size / 2)]
+    
+    # Cloning and mutation
+    clones = []
+    for sol in best_solutions:
+        for _ in range(num_clones):
+            # Clone + mutate
+            mutated = sol + np.random.normal(0, mutation_rate)
+            # Keep within bounds
+            mutated = max(min(mutated, x_bounds[1]), x_bounds[0])
+            clones.append(mutated)
+    
+    # Evaluate clones
+    clone_fitness = [objective_function(x) for x in clones]
+    
+    # Select best clones to form new population
+    sorted_clones = [x for _, x in sorted(zip(clone_fitness, clones))]
+    population = sorted_clones[:population_size]
+
+    # Print best solution each generation
+    best = population[0]
+    print(f"Generation {generation+1}: Best solution = {best:.4f}, Fitness = {objective_function(best):.4f}")
+
+# Final result
+print("\nFinal Best Solution:", best)
+
+
+###########################################################################################################
+7. To apply the artificial immune pattern recognition to perform a task of structure damage 
+Classification. 
+
+
+import numpy as np
+import random
+
+# Synthetic dataset (features: e.g., vibration, stress)
+np.random.seed(42)
+healthy_samples = np.random.rand(50, 4)  # 50 healthy samples
+damaged_samples = np.random.rand(50, 4) + 1  # 50 damaged samples (shifted)
+
+# Combine and label
+X = np.vstack((healthy_samples, damaged_samples))
+y = np.array([0]*50 + [1]*50)
+
+# Negative selection: generate random detectors that do NOT match healthy patterns
+num_detectors = 20
+detectors = []
+
+def match(sample1, sample2, threshold=0.5):
+    return np.linalg.norm(sample1 - sample2) < threshold
+
+while len(detectors) < num_detectors:
+    candidate = np.random.rand(4) + 1  # Focus on damaged space
+    if all(not match(candidate, h) for h in healthy_samples):
+        detectors.append(candidate)
+
+# Classification function using detectors
+def classify(sample, detectors, threshold=0.5):
+    for det in detectors:
+        if match(sample, det, threshold):
+            return 1  # Detected as damaged
+    return 0  # Otherwise, assumed healthy
+
+# Test on all data
+correct = 0
+for xi, yi in zip(X, y):
+    pred = classify(xi, detectors)
+    if pred == yi:
+        correct += 1
+
+accuracy = correct / len(y)
+print(f"Classification accuracy: {accuracy*100:.2f}%")
+
+
+#######################################################################################################
+8. Implement DEAP (Distributed Evolutionary Algorithms) using Python.
+
+!pip install deap
+import random
+from deap import base, creator, tools, algorithms
+
+# Define the optimization problem (maximize x^2)
+creator.create("FitnessMax", base.Fitness, weights=(1.0,))  # maximize
+creator.create("Individual", list, fitness=creator.FitnessMax)
+
+# Initialize toolbox
+toolbox = base.Toolbox()
+toolbox.register("attr_float", random.uniform, -10, 10)  # gene: float between -10 and 10
+toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_float, n=1)
+toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
+# Define evaluation function
+def evalFunc(individual):
+    x = individual[0]
+    return (x ** 2,)
+
+toolbox.register("evaluate", evalFunc)
+toolbox.register("mate", tools.cxBlend, alpha=0.5)
+toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1, indpb=0.2)
+toolbox.register("select", tools.selTournament, tournsize=3)
+
+# Run the algorithm
+def main():
+    random.seed(42)
+    pop = toolbox.population(n=20)
+    hof = tools.HallOfFame(1)
+    stats = tools.Statistics(lambda ind: ind.fitness.values)
+    stats.register("avg", lambda x: sum(v[0] for v in x) / len(x))
+    stats.register("max", lambda x: max(v[0] for v in x))
+    
+    pop, log = algorithms.eaSimple(pop, toolbox, cxpb=0.5, mutpb=0.2, ngen=30, stats=stats, halloffame=hof, verbose=True)
+    
+    print(f"\nBest individual: {hof[0]}, Fitness: {hof[0].fitness.values[0]}")
+
+if __name__ == "__main__":
+    main()
+
+
+#######################################################################################################
+9. Implement Ant colony optimization by solving the Traveling salesman problem using python  
+Problem statement- A salesman needs to visit a set of cities exactly once and return to the original 
+city. The task is to find the shortest possible route that the salesman can take to visit all the cities 
+and return to the starting city.
+
+import numpy as np
+import random
+# Distance matrix (example: 5 cities)
+distances = np.array([
+    [0, 2, 2, 5, 7],
+    [2, 0, 4, 8, 2],
+    [2, 4, 0, 1, 3],
+    [5, 8, 1, 0, 2],
+    [7, 2, 3, 2, 0]
+])
+
+num_cities = len(distances)
+num_ants = 10
+num_iterations = 100
+alpha = 1     # pheromone importance
+beta = 5      # distance importance
+evaporation = 0.5
+Q = 100       # pheromone deposit factor
+
+# Initialize pheromone levels
+pheromone = np.ones((num_cities, num_cities))
+
+def route_distance(route):
+    return sum(distances[route[i], route[i + 1]] for i in range(num_cities - 1)) + distances[route[-1], route[0]]
+
+def select_next_city(pheromone, visibility, visited, current_city):
+    probabilities = []
+    for city in range(num_cities):
+        if city not in visited:
+            prob = (pheromone[current_city][city] ** alpha) * (visibility[current_city][city] ** beta)
+            probabilities.append((city, prob))
+    total = sum(p for _, p in probabilities)
+    if total == 0:
+        return random.choice([city for city in range(num_cities) if city not in visited])
+    r = random.uniform(0, total)
+    s = 0
+    for city, prob in probabilities:
+        s += prob
+        if s >= r:
+            return city
+
+def main():
+    global pheromone
+    visibility = 1 / (distances + np.eye(num_cities))  # avoid division by zero on diagonal
+    best_route = None
+    best_distance = float('inf')
+
+    for iteration in range(num_iterations):
+        all_routes = []
+        for ant in range(num_ants):
+            route = [random.randint(0, num_cities - 1)]
+            while len(route) < num_cities:
+                next_city = select_next_city(pheromone, visibility, route, route[-1])
+                route.append(next_city)
+            all_routes.append(route)
+
+        # Update pheromones
+        pheromone *= (1 - evaporation)
+        for route in all_routes:
+            d = route_distance(route)
+            for i in range(num_cities):
+                pheromone[route[i]][route[(i + 1) % num_cities]] += Q / d
+
+        # Track best route
+        for route in all_routes:
+            d = route_distance(route)
+            if d < best_distance:
+                best_distance = d
+                best_route = route
+
+        print(f"Iteration {iteration + 1}, Best Distance: {best_distance}")
+
+    print(f"\nBest Route: {best_route} with Distance: {best_distance}")
+
+if __name__ == "__main__":
+    main()
+
+
+
+###########################################################################################################
+10. Create and Art with Neural style transfer on given image using deep learning. 
+
+
+!pip install tensorflow matplotlib pillow
+import tensorflow as tf
+import matplotlib.pyplot as plt
+import numpy as np
+from PIL import Image
+
+# Function to load and preprocess images
+def load_and_process_image(path, max_dim=512):
+    img = Image.open(path)
+    long = max(img.size)
+    scale = max_dim / long
+    img = img.resize((round(img.size[0] * scale), round(img.size[1] * scale)))
+    img = tf.keras.preprocessing.image.img_to_array(img)
+    img = tf.expand_dims(img, axis=0)
+    return tf.keras.applications.vgg19.preprocess_input(img)
+
+# Function to deprocess image back to normal display
+def deprocess(img):
+    x = img.copy()
+    x = x.reshape((x.shape[1], x.shape[2], 3))
+    x[:, :, 0] += 103.939
+    x[:, :, 1] += 116.779
+    x[:, :, 2] += 123.68
+    x = x[:, :, ::-1]
+    x = np.clip(x, 0, 255).astype('uint8')
+    return x
+
+# Load content and style images
+content_path = 'content.jpg'  # replace with your content image path
+style_path = 'style.jpg'      # replace with your style image path
+
+content_image = load_and_process_image(content_path)
+style_image = load_and_process_image(style_path)
+
+# Load VGG19 model
+vgg = tf.keras.applications.VGG19(include_top=False, weights='imagenet')
+vgg.trainable = False
+
+# Define layers to use
+content_layers = ['block5_conv2']
+style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1', 'block5_conv1']
+
+num_content_layers = len(content_layers)
+num_style_layers = len(style_layers)
+
+# Model to extract style and content
+def get_model():
+    outputs = [vgg.get_layer(name).output for name in style_layers + content_layers]
+    model = tf.keras.Model([vgg.input], outputs)
+    return model
+
+# Compute Gram matrix for style representation
+def gram_matrix(input_tensor):
+    result = tf.linalg.einsum('bijc,bijd->bcd', input_tensor, input_tensor)
+    input_shape = tf.shape(input_tensor)
+    num_locations = tf.cast(input_shape[1] * input_shape[2], tf.float32)
+    return result / num_locations
+
+# Extract features
+def get_features(model, content, style):
+    content_outputs = model(content)
+    style_outputs = model(style)
+
+    style_features = [gram_matrix(style_layer) for style_layer in style_outputs[:num_style_layers]]
+    content_features = [content_layer for content_layer in content_outputs[num_style_layers:]]
+    return style_features, content_features
+
+# Compute loss
+def compute_loss(model, loss_weights, init_image, gram_style_features, content_features):
+    style_weight, content_weight = loss_weights
+    model_outputs = model(init_image)
+
+    style_output_features = model_outputs[:num_style_layers]
+    content_output_features = model_outputs[num_style_layers:]
+
+    style_score = 0
+    content_score = 0
+
+    for target, comb in zip(gram_style_features, style_output_features):
+        style_score += tf.reduce_mean((gram_matrix(comb) - target) ** 2)
+
+    for target, comb in zip(content_features, content_output_features):
+        content_score += tf.reduce_mean((comb - target) ** 2)
+
+    style_score *= style_weight / num_style_layers
+    content_score *= content_weight / num_content_layers
+    total_loss = style_score + content_score
+    return total_loss
+
+# Run style transfer
+def run_style_transfer(content_path, style_path, num_iterations=1000, content_weight=1e3, style_weight=1e-2):
+    model = get_model()
+    for layer in model.layers:
+        layer.trainable = False
+
+    content_image = load_and_process_image(content_path)
+    style_image = load_and_process_image(style_path)
+
+    gram_style_features, content_features = get_features(model, content_image, style_image)
+
+    init_image = tf.Variable(content_image, dtype=tf.float32)
+    opt = tf.optimizers.Adam(learning_rate=5)
+
+    best_loss, best_img = float('inf'), None
+
+    for i in range(num_iterations):
+        with tf.GradientTape() as tape:
+            loss = compute_loss(model, (style_weight, content_weight), init_image, gram_style_features, content_features)
+
+        grads = tape.gradient(loss, init_image)
+        opt.apply_gradients([(grads, init_image)])
+        init_image.assign(tf.clip_by_value(init_image, -103.939, 255.0 - 103.939))
+
+        if loss < best_loss:
+            best_loss = loss
+            best_img = init_image.numpy()
+
+        if i % 100 == 0:
+            print(f"Iteration {i}, Loss: {loss.numpy()}")
+
+    return deprocess(best_img)
+
+# Run and display
+output = run_style_transfer(content_path, style_path, num_iterations=500)
+plt.imshow(output)
+plt.axis('off')
+plt.show()
